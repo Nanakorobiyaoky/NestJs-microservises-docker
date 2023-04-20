@@ -1,0 +1,92 @@
+version: '3.0'
+
+services:
+  main:
+    container_name: main
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    env_file:
+      - ./api-gateway/.development.env
+    volumes:
+      - ./api-gateway:/app
+      - /app/api-gateway/node_modules
+    command: npm run start:dev
+    depends_on:
+      - rabbitmq
+    restart: always
+    ports:
+      - 3001:3001
+    networks:
+      - backend
+
+  auth:
+    container_name: auth
+    build:
+      context: ./auth-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./auth-microservice/.env
+    volumes:
+      - ./auth-microservice:/app
+      - /app/auth-microservice/node_modules
+    command: npm run start:dev
+    depends_on:
+      - rabbitmq
+      - postgres
+    restart: always
+    networks:
+      - backend
+
+  profile:
+    container_name: profile
+    build:
+      context: ./profile-microservice
+      dockerfile: Dockerfile
+    env_file:
+      - ./profile-microservice/.env
+    volumes:
+      - ./profile-microservice:/app
+      - /app/profile-microservice/node_modules
+    command: npm run start:dev
+    depends_on:
+      - rabbitmq
+      - postgres
+    restart: always
+    networks:
+      - backend
+
+
+  postgres:
+    container_name: postgres
+    image: postgres:12
+    env_file:
+      - auth-microservice/.env
+    environment:
+      PG_DATA: /var/lib/postgresql/data
+    ports:
+      - 5432:5432
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    networks:
+      - backend
+
+  rabbitmq:
+    container_name: rabbitmq
+    image: rabbitmq
+    ports:
+      - 5672:5672
+      - 15672:15672
+    volumes:
+      - rabbit_data:/var/lib/rabbitmq
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  pgdata:
+  rabbit_data:
